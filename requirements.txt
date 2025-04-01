@@ -3,3 +3,9 @@ flask-cors
 numpy
 opencv-python
 joblib
+gunicorn
+pandas
+scikit-learn
+torch
+tensorflow
+pickle5  # Only if needed
