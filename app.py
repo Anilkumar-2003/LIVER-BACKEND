@@ -6,7 +6,8 @@ import tensorflow as tf
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Suppress TensorFlow warnings
+# Suppress TensorFlow warnings
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 app = Flask(__name__)
 CORS(app)
@@ -14,6 +15,10 @@ CORS(app)
 # Model URL and path
 MODEL_URL = "https://huggingface.co/Vagicharla/liver_disease_h5/resolve/main/hepatitis_detection_model.h5"
 MODEL_PATH = "model.h5"
+
+# Ensure 'uploads' directory exists
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Function to download model
 def download_model(url, path):
@@ -24,15 +29,15 @@ def download_model(url, path):
             with open(path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
-            print("Model downloaded successfully.")
+            print("✅ Model downloaded successfully.")
         else:
-            print(f"Model download failed: {response.status_code}")
+            print(f"❌ Model download failed: {response.status_code}")
             raise Exception("Failed to download model.")
 
 # Download model if not exists
 download_model(MODEL_URL, MODEL_PATH)
 
-# ✅ FIX: Load TensorFlow Model Instead of joblib
+# Load TensorFlow Model
 try:
     model = tf.keras.models.load_model(MODEL_PATH)
     print("✅ Model loaded successfully.")
@@ -56,7 +61,9 @@ def predict():
         return jsonify({"error": "No file provided"}), 400
 
     file = request.files["file"]
-    file_path = "https://i.postimg.cc/nrpZNMLy/temp.png"
+    
+    # Save file to local directory
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
 
     try:
@@ -66,6 +73,9 @@ def predict():
         return jsonify({"prediction": result, "confidence": float(prediction)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    finally:
+        # Remove the file after prediction
+        os.remove(file_path)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
