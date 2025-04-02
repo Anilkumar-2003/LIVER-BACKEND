@@ -8,5 +8,5 @@ pandas
 scikit-learn
 torch
 tensorflow
-pickle5  # Only if needed
+# pickle5  # Only if needed
 requests  # For downloading model from Google Drive
