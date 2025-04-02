@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import joblib
 import requests
+import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -13,16 +14,26 @@ CORS(app)  # Enable Cross-Origin Resource Sharing (CORS) for frontend requests
 MODEL_URL = "https://huggingface.co/spaces/Vagicharla/LIVER_DISEASE/resolve/main/model.pkl"
 MODEL_PATH = "model.pkl"
 
-# Download model if it does not exist
+# Function to download model with retries
+def download_model(url, path, retries=5, delay=5):
+    for i in range(retries):
+        try:
+            print(f"Attempt {i+1}: Downloading model...")
+            response = requests.get(url, stream=True, timeout=30)
+            if response.status_code == 200:
+                with open(path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                print("Model downloaded successfully.")
+                return
+        except Exception as e:
+            print(f"Download failed: {e}")
+        time.sleep(delay)  # Wait before retrying
+    raise FileNotFoundError("Failed to download model after multiple attempts.")
+
+# Download model if not present
 if not os.path.exists(MODEL_PATH):
-    print("Downloading model from Hugging Face...")
-    response = requests.get(MODEL_URL)
-    if response.status_code == 200:
-        with open(MODEL_PATH, "wb") as f:
-            f.write(response.content)
-        print("Model downloaded successfully.")
-    else:
-        raise FileNotFoundError("Failed to download model from Hugging Face.")
+    download_model(MODEL_URL, MODEL_PATH)
 
 # Load the trained machine learning model
 model = joblib.load(MODEL_PATH)
@@ -55,5 +66,5 @@ def predict():
         return jsonify({"error": str(e)}), 500  # Handle any errors during processing
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)  # Run the Flask app on port 5000
-
+    port = int(os.environ.get("PORT", 5000))  # Use the port assigned by Render
+    app.run(host="0.0.0.0", port=port, debug=True)  # Run the Flask app
