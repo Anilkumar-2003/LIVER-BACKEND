@@ -3,10 +3,5 @@ flask-cors
 numpy
 opencv-python
 joblib
+requests
 gunicorn
-pandas
-scikit-learn
-torch
-tensorflow
-# pickle5  # Only if needed
-requests  # For downloading model from Google Drive
