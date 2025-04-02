@@ -1,16 +1,19 @@
 import os
 import numpy as np
 import cv2
+import joblib
 import requests
 import time
-import tensorflow as tf  # Import TensorFlow to load .h5 model
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-app = Flask(__name__)
-CORS(app)  # Enable Cross-Origin Resource Sharing (CORS) for frontend requests
+# Suppress TensorFlow warnings
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-# Corrected Hugging Face model URL
+app = Flask(__name__)
+CORS(app)  # Enable CORS for frontend requests
+
+# Model URL and path
 MODEL_URL = "https://huggingface.co/Vagicharla/liver_disease_h5/resolve/main/hepatitis_detection_model.h5"
 MODEL_PATH = "model.h5"
 
@@ -37,35 +40,39 @@ def download_model(url, path, retries=5, delay=5):
 if not os.path.exists(MODEL_PATH):
     download_model(MODEL_URL, MODEL_PATH)
 
-# Load the trained TensorFlow model
-model = tf.keras.models.load_model(MODEL_PATH)
+# Load the trained machine learning model
+try:
+    model = joblib.load(MODEL_PATH)
+except Exception as e:
+    print(f"Error loading model: {e}")
+    raise
 
 # Function to preprocess the input image
 def preprocess_image(image_path, target_size=(256, 256)):
-    image = cv2.imread(image_path)  # Read the image from file
+    image = cv2.imread(image_path)
     if image is None:
         raise ValueError("Could not read the image.")
-    image = cv2.resize(image, target_size)  # Resize image to match model input size
-    image = image.astype("float32") / 255.0  # Normalize pixel values to [0,1]
-    image = np.expand_dims(image, axis=0)  # Add batch dimension
+    image = cv2.resize(image, target_size)
+    image = image.astype("float32") / 255.0
+    image = np.expand_dims(image, axis=0)
     return image
 
 @app.route("/predict", methods=["POST"])
 def predict():
     if "file" not in request.files:
-        return jsonify({"error": "No file provided"}), 400  # Return error if no file is provided
+        return jsonify({"error": "No file provided"}), 400
 
-    file = request.files["file"]  # Get the uploaded file
-    file_path = "temp.jpg"
-    file.save(file_path)  # Save file temporarily
+    file = request.files["file"]
+    file_path = "https://i.postimg.cc/nrpZNMLy/temp.png"
+    file.save(file_path)
 
     try:
-        image = preprocess_image(file_path)  # Preprocess the image
-        prediction = model.predict(image)[0][0]  # Make a prediction
-        result = "Infection" if prediction > 0.5 else "No Infection"  # Interpret the prediction
-        return jsonify({"prediction": result, "confidence": float(prediction)})  # Return the result
+        image = preprocess_image(file_path)
+        prediction = model.predict(image)[0][0]
+        result = "Infection" if prediction > 0.5 else "No Infection"
+        return jsonify({"prediction": result, "confidence": float(prediction)})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500  # Handle any errors during processing
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Use the port assigned by Render
