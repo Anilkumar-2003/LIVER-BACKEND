@@ -11,8 +11,8 @@ app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing (CORS) for frontend requests
 
 # Corrected Hugging Face model URL
-MODEL_URL = "https://huggingface.co/Vagicharla/LIVER_DISEASE/resolve/main/model.pkl"
-MODEL_PATH = "model.pkl"
+MODEL_URL = "https://huggingface.co/Vagicharla/liver_disease_h5/resolve/main/hepatitis_detection_model.h5"
+MODEL_PATH = "model.h5"
 
 # Function to download model with retries
 def download_model(url, path, retries=5, delay=5):
