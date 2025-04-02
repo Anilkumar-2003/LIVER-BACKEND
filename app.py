@@ -1,53 +1,46 @@
 import os
 import numpy as np
 import cv2
-import joblib
 import requests
-import time
+import tensorflow as tf
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Suppress TensorFlow warnings
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Suppress TensorFlow warnings
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend requests
+CORS(app)
 
 # Model URL and path
 MODEL_URL = "https://huggingface.co/Vagicharla/liver_disease_h5/resolve/main/hepatitis_detection_model.h5"
 MODEL_PATH = "model.h5"
 
-# Function to download model with retries
-def download_model(url, path, retries=5, delay=5):
-    for i in range(retries):
-        try:
-            print(f"Attempt {i+1}: Downloading model...")
-            response = requests.get(url, stream=True, timeout=60)
-            if response.status_code == 200:
-                with open(path, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                print("Model downloaded successfully.")
-                return
-            else:
-                print(f"Failed to download model. Status code: {response.status_code}")
-        except Exception as e:
-            print(f"Download failed: {e}")
-        time.sleep(delay)  # Wait before retrying
-    raise FileNotFoundError("Failed to download model after multiple attempts.")
+# Function to download model
+def download_model(url, path):
+    if not os.path.exists(path):
+        print("Downloading model...")
+        response = requests.get(url, stream=True, timeout=60)
+        if response.status_code == 200:
+            with open(path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            print("Model downloaded successfully.")
+        else:
+            print(f"Model download failed: {response.status_code}")
+            raise Exception("Failed to download model.")
 
-# Download model if not present
-if not os.path.exists(MODEL_PATH):
-    download_model(MODEL_URL, MODEL_PATH)
+# Download model if not exists
+download_model(MODEL_URL, MODEL_PATH)
 
-# Load the trained machine learning model
+# ✅ FIX: Load TensorFlow Model Instead of joblib
 try:
-    model = joblib.load(MODEL_PATH)
+    model = tf.keras.models.load_model(MODEL_PATH)
+    print("✅ Model loaded successfully.")
 except Exception as e:
-    print(f"Error loading model: {e}")
+    print(f"❌ Error loading model: {e}")
     raise
 
-# Function to preprocess the input image
+# Preprocess image
 def preprocess_image(image_path, target_size=(256, 256)):
     image = cv2.imread(image_path)
     if image is None:
@@ -75,5 +68,5 @@ def predict():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Use the port assigned by Render
-    app.run(host="0.0.0.0", port=port, debug=True)  # Run the Flask app
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
