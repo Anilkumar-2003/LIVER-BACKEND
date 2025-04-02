@@ -10,8 +10,8 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing (CORS) for frontend requests
 
-# Define Hugging Face model URL
-MODEL_URL = "https://huggingface.co/spaces/Vagicharla/LIVER_DISEASE/resolve/main/model.pkl"
+# Corrected Hugging Face model URL
+MODEL_URL = "https://huggingface.co/Vagicharla/LIVER_DISEASE/resolve/main/model.pkl"
 MODEL_PATH = "model.pkl"
 
 # Function to download model with retries
@@ -19,13 +19,15 @@ def download_model(url, path, retries=5, delay=5):
     for i in range(retries):
         try:
             print(f"Attempt {i+1}: Downloading model...")
-            response = requests.get(url, stream=True, timeout=30)
+            response = requests.get(url, stream=True, timeout=60)
             if response.status_code == 200:
                 with open(path, "wb") as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         f.write(chunk)
                 print("Model downloaded successfully.")
                 return
+            else:
+                print(f"Failed to download model. Status code: {response.status_code}")
         except Exception as e:
             print(f"Download failed: {e}")
         time.sleep(delay)  # Wait before retrying
