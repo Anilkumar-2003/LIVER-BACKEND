@@ -1,9 +1,9 @@
 import os
 import numpy as np
 import cv2
-import joblib
 import requests
 import time
+import tensorflow as tf  # Import TensorFlow to load .h5 model
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -37,8 +37,8 @@ def download_model(url, path, retries=5, delay=5):
 if not os.path.exists(MODEL_PATH):
     download_model(MODEL_URL, MODEL_PATH)
 
-# Load the trained machine learning model
-model = joblib.load(MODEL_PATH)
+# Load the trained TensorFlow model
+model = tf.keras.models.load_model(MODEL_PATH)
 
 # Function to preprocess the input image
 def preprocess_image(image_path, target_size=(256, 256)):
